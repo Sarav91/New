@@ -1,0 +1,127 @@
+package com; 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.JFileChooser;
+
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+public class Feed_Validator {
+
+	static int row=0;
+	static FileInputStream fis;
+	static FileOutputStream fos;
+	static XSSFWorkbook wbk;
+	static XSSFSheet sht, sht1;
+	static JFileChooser J1, J2;
+	
+	public static void main(String[] args) throws IOException {
+		// TODO Auto-generated method stub
+
+		J1 = new JFileChooser();
+		J1.showOpenDialog(null);
+		fis = new FileInputStream(J1.getSelectedFile());
+		wbk = new XSSFWorkbook(fis);
+		sht = wbk.getSheetAt(0);
+		sht1 = wbk.createSheet();
+		
+		J2 = new JFileChooser();
+		J2.showOpenDialog(null);
+		File file= new File(J2.getSelectedFile().toString());
+		FileReader fr = new FileReader(file);
+		BufferedReader br = new BufferedReader(fr);
+		
+		List<Object> arr = new ArrayList<Object>();
+		String line;
+		
+		while ((line = br.readLine())!= null) {
+			arr.clear();
+			int start=0, end=0;
+			
+			for (int i=0;i<=sht.getLastRowNum();i++){
+				
+				if(sht.getRow(i).getCell(1).getStringCellValue().equals("CHAR")){
+					end = end + (int) sht.getRow(i).getCell(2).getNumericCellValue();
+					String var = line.substring(start, end);
+					arr.add(var.trim());
+					start=end;
+				}
+				
+				else if(sht.getRow(i).getCell(1).getStringCellValue().equals("DECIMAL")){
+					
+					if ((int)sht.getRow(i).getCell(3).getNumericCellValue() == 0){
+						end = end + (int) sht.getRow(i).getCell(2).getNumericCellValue() + 2;
+						Double num = Double.parseDouble(line.substring(start, end));
+						String check = num.toString();
+						System.out.println(check.length());
+						System.out.println((int) sht.getRow(i).getCell(2).getNumericCellValue());
+						if (check.length()> (int) sht.getRow(i).getCell(2).getNumericCellValue() ){
+							throw new Error("Size limit execeeds");
+						}
+						arr.add(num);
+						start=end;
+						
+					}
+					
+					else {
+						end = end + (int) sht.getRow(i).getCell(2).getNumericCellValue() + 2;
+						Double num = Double.parseDouble(line.substring(start, end).trim());
+						//String var = line.substring(start, end);
+						arr.add(num);
+						start=end;
+					}
+				}
+				
+				else if(sht.getRow(i).getCell(1).getStringCellValue().equals("INTEGER")){
+					end = end + (int) sht.getRow(i).getCell(2).getNumericCellValue();
+					int num = Integer.parseInt(line.substring(start, end).trim());
+					arr.add(num);
+					start=end;
+				}
+			}
+			
+		//excelupdate(arr);	
+		}
+		br.close();
+		J1.showSaveDialog(null);
+		System.out.println(J1.getCurrentDirectory());
+		System.out.println(J1.getSelectedFile().getName());
+		fos = new FileOutputStream(J1.getCurrentDirectory()+"\\"+J1.getSelectedFile().getName());
+		wbk.write(fos);
+		fos.close();
+	}
+
+	
+	public static void excelupdate(List<Object> val){
+	
+	int i = val.size();
+	Row srow = sht1.createRow(row);
+	
+	for(int col=0;col<i;col++){
+		if(val.get(col) instanceof String){
+			srow.createCell(col).setCellValue(val.get(col).toString());
+		}
+		else if (val.get(col) instanceof Double){
+			srow.createCell(col).setCellValue((double) val.get(col));
+		}
+		else if (val.get(col) instanceof Integer){
+			srow.createCell(col).setCellValue((int) val.get(col));
+		}
+	}
+	
+	System.out.println("Row "+(row+1)+" Completed");
+	row++;
+	if(row%1000==0){
+		Runtime.getRuntime().gc();
+		System.gc();
+	}
+	}
+}
